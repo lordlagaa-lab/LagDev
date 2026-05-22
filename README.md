@@ -143,6 +143,40 @@ wrangler d1 execute fluence-leads --command="INSERT INTO users (name, email, pas
 
 ---
 
+## 🎯 Para usar com Claude (claude.ai)
+
+Se vais pedir ajuda ao Claude (https://claude.ai), **copia e cola isto no chat**:
+
+> **Projeto: Fluence Lead Scanner** — app mobile-first para scanear cartões de visita.
+>
+> **Stack:** 100% Cloudflare (Workers + D1 + Pages)
+> **Repo:** https://github.com/nexlineai/fluence
+>
+> **Deployed:**
+> - Frontend: https://fluence-lead-scanner.pages.dev
+> - API: https://fluence-lead-scanner-api.maitilupas.workers.dev
+>
+> **Users teste:** admin@fluence.com / fluence2024 (admin)
+>
+> **Estrutura:**
+> | Ficheiro | O que faz |
+> |----------|-----------|
+> | `frontend/index.html` | Interface HTML/JS |
+> | `worker/src/index.js` | API routes e handlers |
+> | `worker/src/db.js` | CRUD base de dados (D1) |
+> | `worker/src/auth.js` | Login (PBKDF2 + JWT) |
+> | `worker/schema.sql` | Schema da DB |
+>
+> **Regras:**
+> - Temperatura dos leads: minúsculas ("hot", "warm", "cold")
+> - Reps vêem só leads deles, admins vêem todos
+> - JWT expira em 7 dias
+> - GitHub Actions faz deploy automático no push para main
+>
+> Preciso que me ajudes com: [explica o que queres fazer]
+
+---
+
 ## 📋 Notas
 
 - Reps vêem APENAS os leads que criaram

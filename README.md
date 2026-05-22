@@ -59,16 +59,27 @@ wrangler secret put JWT_SECRET
 
 ---
 
-## 🚀 Deploy
+## 🚀 Deploy (Automático)
+
+**GitHub Actions** faz deploy automático sempre que fazes push para `main`.
+
+### Setup dos Secrets no GitHub (1 vez só)
+
+Vai a **Settings > Secrets and variables > Actions** e adiciona:
+
+| Secret | Valor |
+|--------|-------|
+| `CLOUDFLARE_API_TOKEN` | Token Cloudflare com Workers:Edit, D1:Edit, Pages:Edit |
+| `JWT_SECRET` | `openssl rand -base64 32` (qualquer string aleatória) |
+
+Depois disto, qualquer push para `main` faz deploy automático do worker + frontend.
+
+### Deploy manual (alternativa)
 
 ```bash
-# Worker
-cd worker
-wrangler deploy
-
-# Frontend
-cd ../frontend
-wrangler pages deploy .
+export CLOUDFLARE_API_TOKEN="cfut_..."
+cd worker && wrangler deploy
+cd ../frontend && wrangler pages deploy .
 ```
 
 ---

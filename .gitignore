@@ -1,0 +1,18 @@
+# Wrangler cache
+.wrangler/
+*.wrangler/
+# Environment files
+.env
+.env.*
+# Secrets
+*secret*
+*credential*
+*password*
+# OS files
+.DS_Store
+Thumbs.db
+# Python cache
+__pycache__/
+*.pyc
+# Node modules
+node_modules/

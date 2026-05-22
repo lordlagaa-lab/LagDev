@@ -6,13 +6,12 @@ compatibility_date = "2025-04-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "fluence-leads"
-database_id = ""  # Run: wrangler d1 create fluence-leads → paste ID here
+database_id = "949471af-1670-4aa7-b65a-5b1f24078ccf"
 
-# CORS for dev
 [env.production]
-vars = { ENVIRONMENT = "production", JWT_SECRET = "change-this-to-a-random-secret" }
+vars = { ENVIRONMENT = "production" }
 
 # Routes
 routes = [
-  { pattern = "fluence-scanner.yourdomain.com", zone_id = "" }
+  { pattern = "fluence-lead-scanner-api.maitilupas.workers.dev", zone_id = "2348c78bf85b27e6a55e5ec04fb8aaa6" }
 ]

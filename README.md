@@ -1,121 +1,142 @@
 # Fluence Lead Scanner
 
 App mobile-first para scanear cartões de visita e gerir leads em feiras/eventos.
+**100% Cloudflare** — sem servidor próprio.
 
-## Arquitectura
+---
 
-```
-Frontend (HTML/JS)  →  Cloudflare Worker (API)  →  Cloudflare D1 (SQLite)
-```
+## 🔗 URLs Deployed
 
-## Deploy
+| Component | URL |
+|-----------|-----|
+| Frontend | https://fluence-lead-scanner.pages.dev |
+| API (Worker) | https://fluence-lead-scanner-api.maitilupas.workers.dev |
+| D1 Database | `fluence-leads` |
 
-### 1. Criar a D1 database
+---
+
+## 🔐 Credenciais (seed users)
+
+| Nome | Email | Password | Role |
+|------|-------|----------|------|
+| Admin | admin@fluence.com | `fluence2024` | admin |
+| Alex | alex@fluence.com | `fluence2024` | rep |
+| Sophie | sophie@fluence.com | `fluence2024` | rep |
+| James | james@fluence.com | `fluence2024` | rep |
+| Priya | priya@fluence.com | `fluence2024` | rep |
+
+---
+
+## ☁️ Cloudflare Setup (necessário para correr localmente)
+
+### Token API
+Precisas de um token Cloudflare com:
+- **D1:Edit**
+- **Workers Scripts:Edit**
+- **Cloudflare Pages:Edit**
 
 ```bash
+# Opção 1: Login via browser (recomendado)
+wrangler login
+
+# Opção 2: Token direto (se não tiveres browser)
+export CLOUDFLARE_API_TOKEN="cfut_..."
+```
+
+### D1 Database (já criada, UUID no wrangler.toml)
+
+```bash
+# Só precisas de correr o schema se estiveres a fazer setup fresh:
 cd worker
-wrangler d1 create fluence-leads
-```
-
-Copia o `database_id` que aparece no output e cola no `wrangler.toml`.
-
-### 2. Inicializar schema
-
-```bash
 wrangler d1 execute fluence-leads --file=schema.sql
 ```
 
-### 3. Gerar passwords e inserir users
-
-O schema.sql tem placeholders. Gera hashes PBKDF2 com este script:
-
-```bash
-node -e "
-const { webcrypto } = require('crypto');
-const { subtle } = webcrypto;
-async function hash(pw) {
-  const salt = crypto.randomUUID().slice(0, 16);
-  const key = await subtle.importKey('raw', Buffer.from(pw), 'PBKDF2', false, ['deriveBits']);
-  const bits = await subtle.deriveBits({ name: 'PBKDF2', salt: Buffer.from(salt), iterations: 100000, hash: 'SHA-256' }, key, 256);
-  return 'pbkdf2:100000:' + salt + ':' + Buffer.from(bits).toString('base64url');
-}
-Promise.all(['password1','password2']).then(h => console.log(h.join('\n')));
-"
-```
-
-Depois insere manualmente na D1:
-```bash
-wrangler d1 execute fluence-leads --command="INSERT INTO users (name, email, password_hash, role) VALUES ('Alex van der Berg', 'alex@fluence.com', '<hash>', 'rep');"
-```
-
-### 4. Configurar JWT_SECRET
-
+### JWT Secret
 ```bash
 wrangler secret put JWT_SECRET
-# Gera um segredo aleatório: openssl rand -base64 32
+# Cola: openssl rand -base64 32
 ```
 
-### 5. Deploy do Worker
+---
+
+## 🚀 Deploy
 
 ```bash
+# Worker
+cd worker
 wrangler deploy
+
+# Frontend
+cd ../frontend
+wrangler pages deploy .
 ```
 
-### 6. Configurar frontend
+---
 
-Edita `frontend/index.html` e muda a linha:
-
-```js
-const API_BASE = 'https://fluence-scanner.yourdomain.com';
-```
-
-Para o URL do teu worker (aparece no output do `wrangler deploy`).
-
-### 7. Fazer deploy do frontend
-
-Podes hospedar o `frontend/index.html` em:
-- Cloudflare Pages (`wrangler pages deploy frontend/`)
-- Qualquer static host (Netlify, Vercel, S3)
-- Ou servir pelo próprio worker (adicionar rota static)
-
-## Estrutura
+## 📁 Estrutura do Repositório
 
 ```
+fluence/
 ├── worker/
 │   ├── src/
 │   │   ├── index.js      # Worker principal (routes, handlers)
 │   │   ├── db.js          # Camada D1 (CRUD, queries)
 │   │   └── auth.js        # JWT + PBKDF2 (Web Crypto API)
 │   ├── schema.sql         # D1 database schema
-│   ├── wrangler.toml      # Config Cloudflare
+│   ├── wrangler.toml      # Config Cloudflare (com DB UUID preenchido)
 │   └── package.json
 ├── frontend/
-│   └── index.html         # App modificada (usa API em vez de localStorage)
+│   └── index.html         # App HTML/JS
+├── nginx-fluence.conf     # Config do servidor (apenas referência, não necessário)
 └── README.md
 ```
 
-## API Endpoints
+---
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | /api/auth/login | ❌ | Login (email + password) → JWT |
-| POST | /api/auth/register | ❌ | Registar novo user |
-| GET | /api/leads | ✅ | Listar leads (filtros: search, temperature, show_id, assigned_to) |
-| POST | /api/leads | ✅ | Criar lead |
-| GET | /api/leads/:id | ✅ | Ver lead |
-| PUT | /api/leads/:id | ✅ | Editar lead |
-| DELETE | /api/leads/:id | ✅ | Apagar lead |
-| GET | /api/leads/stats | ✅ | Estatísticas (total, hot, warm, actions) |
-| GET | /api/leads/export | ✅ | Exportar todos (JSON) |
-| GET | /api/users | ✅ | Listar users |
-| POST | /api/users | 🔒 | Criar user (admin only) |
-| GET | /api/shows | ✅ | Listar eventos |
-| POST | /api/shows | 🔒 | Criar evento (admin only) |
+## 🤖 Para o Claude Code continuar
 
-## Notas
+Se estás a usar Claude Code (ou qualquer AI agent) para dar manutenção a este projeto:
+
+### Contexto necessário
+
+1. **O projeto está 100% em Cloudflare** — Workers + D1 + Pages. Não há servidor físico.
+2. **O frontend** está em `frontend/index.html` — já aponta para `https://fluence-lead-scanner-api.maitilupas.workers.dev`
+3. **A API base** está definida no topo do `frontend/index.html` como `API_BASE`
+4. **O worker** está em `worker/src/index.js` — todas as rotas, auth, CRUD
+5. **A DB é D1** — SQLite na edge, schema em `worker/schema.sql`
+6. **Auth** usa PBKDF2 (100k iterações) + JWT (7 dias)
+7. **Nginx config** (`nginx-fluence.conf`) é só o catch-all 444 — não precisas de mexer
+8. **JWT_SECRET** está definida como secret no Cloudflare — não está no código
+9. **Temperatura** dos leads: `"hot"`, `"warm"`, `"cold"` (minúsculas) — validação no DB
+
+### Para deployar do teu lado
+
+```bash
+# 1. Autenticar
+wrangler login
+
+# 2. Deploy worker
+cd worker && wrangler deploy
+
+# 3. Deploy frontend
+cd ../frontend && wrangler pages deploy .
+```
+
+### Se precisares de criar users novos
+
+```bash
+# O worker tem endpoint POST /api/users (admin only)
+# Podes também inserir diretamente na D1:
+wrangler d1 execute fluence-leads --command="INSERT INTO users (name, email, password_hash, role) VALUES ('Nome', 'email@domain.com', '<pbkdf2_hash>', 'rep');"
+```
+
+---
+
+## 📋 Notas
 
 - Reps vêem APENAS os leads que criaram
 - Admins vêem TODOS os leads
 - Passwords hasheadas com PBKDF2 (100k iterações)
 - JWT expira em 7 dias
 - Dados sincronizados em tempo real com a Cloudflare edge
+- Este repo é o SOURCE OF TRUTH — altera aqui e faz deploy

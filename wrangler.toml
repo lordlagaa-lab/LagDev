@@ -1,0 +1,18 @@
+name = "fluence-lead-scanner"
+main = "src/index.js"
+compatibility_date = "2025-04-01"
+
+# D1 Database
+[[d1_databases]]
+binding = "DB"
+database_name = "fluence-leads"
+database_id = ""  # Run: wrangler d1 create fluence-leads → paste ID here
+
+# CORS for dev
+[env.production]
+vars = { ENVIRONMENT = "production", JWT_SECRET = "change-this-to-a-random-secret" }
+
+# Routes
+routes = [
+  { pattern = "fluence-scanner.yourdomain.com", zone_id = "" }
+]

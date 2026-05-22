@@ -1,0 +1,7 @@
+{
+  "name": "fluence-lead-scanner",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Fluence Lead Scanner — Cloudflare Worker backend",
+  "main": "src/index.js"
+}

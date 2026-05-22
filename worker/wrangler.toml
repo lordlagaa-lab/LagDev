@@ -1,0 +1,12 @@
+name = "fluence-lead-scanner-api"
+main = "src/index.js"
+compatibility_date = "2025-04-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "fluence-leads"
+database_id = "949471af-1670-4aa7-b65a-5b1f24078ccf"
+
+[vars]
+ENVIRONMENT = "production"
+JWT_SECRET = "fl_cloudflare_jwt_2026_secure"

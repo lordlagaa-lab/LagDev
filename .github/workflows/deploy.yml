@@ -33,4 +33,4 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           workingDirectory: frontend
-          command: pages deploy .
+          command: pages deploy . --project-name=fluence-lead-scanner

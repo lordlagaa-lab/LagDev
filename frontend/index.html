@@ -185,6 +185,12 @@ textarea.inp{resize:none;min-height:84px;line-height:1.5}
 .m-close:active{opacity:0.75}
 .m-del{background:var(--red-bg);border:1px solid var(--red);color:var(--red-tx);font-family:inherit;font-size:14px;font-weight:600;padding:12px 16px;border-radius:var(--radius-sm);cursor:pointer;display:flex;align-items:center;gap:6px}
 .m-del:active{opacity:0.8}
+.m-edit{background:rgba(200,241,53,0.12);border:1px solid rgba(200,241,53,0.35);color:var(--fl);font-family:inherit;font-size:14px;font-weight:600;padding:12px 16px;border-radius:var(--radius-sm);cursor:pointer;display:flex;align-items:center;gap:6px}
+.m-edit:active{opacity:0.8}
+.m-save{flex:1;background:var(--fl);border:none;color:#002a55;font-family:inherit;font-size:14px;font-weight:800;padding:12px;border-radius:var(--radius-sm);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+.m-save:active{opacity:0.85}
+.m-save:disabled{opacity:0.5;cursor:not-allowed}
+.eform{padding:16px}
 
 .toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--fl);color:#002a55;font-size:13px;font-weight:800;padding:10px 20px;border-radius:6px;white-space:nowrap;z-index:300;opacity:0;transition:opacity 0.2s;pointer-events:none}
 .toast.show{opacity:1}
@@ -251,12 +257,7 @@ input[type=file]{display:none}
 
   <div class="user-bar">
     <span class="user-label">Assigned to</span>
-    <select class="user-sel" id="userSel" onchange="onUserChange()">
-      <option>Alex van der Berg</option>
-      <option>Sophie Müller</option>
-      <option>James Okafor</option>
-      <option>Priya Sharma</option>
-    </select>
+    <select class="user-sel" id="userSel" onchange="onUserChange()"></select>
   </div>
 
   <div class="nav">
@@ -335,7 +336,7 @@ input[type=file]{display:none}
       </div>
       <div class="field"><label class="lbl">Notes</label><textarea class="inp" id="f_notes" placeholder="Pain points, current supplier, decision drivers..."></textarea></div>
       <div class="field"><label class="lbl">Assigned to</label>
-        <select class="inp" id="f_owner"><option>Alex van der Berg</option><option>Sophie Müller</option><option>James Okafor</option><option>Priya Sharma</option></select>
+        <select class="inp" id="f_owner"></select>
       </div>
 
       <div class="sec">Next action</div>
@@ -381,7 +382,6 @@ input[type=file]{display:none}
         <div class="filters">
           <select class="fsel" id="fUser" onchange="renderLeads()">
             <option value="">All reps</option>
-            <option>Alex van der Berg</option><option>Sophie Müller</option><option>James Okafor</option><option>Priya Sharma</option>
           </select>
           <select class="fsel" id="fTemp" onchange="renderLeads()">
             <option value="">All temps</option>
@@ -416,8 +416,9 @@ input[type=file]{display:none}
         </div>
       </div>
       <div class="mbody" id="mBody"></div>
-      <div class="mfoot">
+      <div class="mfoot" id="mFoot">
         <button class="m-close" onclick="closeModal()">Close</button>
+        <button class="m-edit" onclick="startEdit()"><i class="fa fa-pen"></i> Edit</button>
         <button class="m-del" onclick="delModal()"><i class="fa fa-trash"></i> Delete</button>
       </div>
     </div>
@@ -436,8 +437,9 @@ const API_BASE = 'https://fluence-lead-scanner-api.maitilupas.workers.dev';
 
 let token = localStorage.getItem('fl_token');
 let user = JSON.parse(localStorage.getItem('fl_user_data') || 'null');
-let leads = [];
+let leads = [], users = [];
 let temp = '', prods = [], recr = null, recSecs = 0, recTmr = null, isRec = false, ocrTxt = '', modalId = null;
+let editTemp = '', editProds = [];
 
 // ---- API Helpers ----
 
@@ -595,18 +597,21 @@ async function showApp() {
   document.getElementById('app').style.display = 'flex';
   document.getElementById('userName').textContent = user.name;
 
-  // Set default assigned to from user name
-  const ownerSel = document.getElementById('f_owner');
-  if ([...ownerSel.options].some(o => o.value === user.name)) {
-    ownerSel.value = user.name;
-    document.getElementById('userSel').value = user.name;
-  }
-
   const sn = localStorage.getItem('fl_show');
   if (sn) document.getElementById('showTag').textContent = sn;
 
   const d = new Date(); d.setDate(d.getDate() + 7);
   document.getElementById('f_due').value = d.toISOString().slice(0, 10);
+
+  // Load users first so dropdowns are populated before we set defaults
+  await loadUsers();
+
+  // Default assigned-to to logged-in user
+  const ownerSel = document.getElementById('f_owner');
+  if ([...ownerSel.options].some(o => o.value === user.name)) {
+    ownerSel.value = user.name;
+    document.getElementById('userSel').value = user.name;
+  }
 
   await loadLeads();
   renderLeads();
@@ -799,6 +804,39 @@ function clearForm() {
   document.getElementById('f_due').value = d.toISOString().slice(0, 10);
 }
 
+// ---- Users ----
+
+async function loadUsers() {
+  try {
+    const data = await api('/api/users');
+    users = data.users || [];
+    populateUserSelects();
+  } catch (e) {
+    // silently degrade — selects remain empty
+  }
+}
+
+function populateUserSelects() {
+  const opts = users.map(u => `<option value="${esc(u.name)}">${esc(u.name)}</option>`).join('');
+
+  // Capture form owner select
+  const fo = document.getElementById('f_owner');
+  const foCurr = fo.value;
+  fo.innerHTML = opts;
+  if ([...fo.options].some(o => o.value === foCurr)) fo.value = foCurr;
+
+  // Global "Assigned to" bar
+  const us = document.getElementById('userSel');
+  const usCurr = us.value;
+  us.innerHTML = opts;
+  if ([...us.options].some(o => o.value === usCurr)) us.value = usCurr;
+  else if (user && [...us.options].some(o => o.value === user.name)) us.value = user.name;
+
+  // Leads filter
+  const fu = document.getElementById('fUser');
+  fu.innerHTML = '<option value="">All reps</option>' + opts;
+}
+
 // ---- Leads List ----
 
 function renderLeads() {
@@ -882,12 +920,144 @@ function viewLead(id) {
   ].map(([ic, k, v]) => '<div class="dr"><i class="fa ' + ic + ' dr-ic"></i><div><div class="dr-k">' + k + '</div><div class="dr-v">' + v + '</div></div></div>').join('');
 
   document.getElementById('mBody').innerHTML = rows;
+  document.getElementById('mFoot').innerHTML = `
+    <button class="m-close" onclick="closeModal()">Close</button>
+    <button class="m-edit" onclick="startEdit()"><i class="fa fa-pen"></i> Edit</button>
+    <button class="m-del" onclick="delModal()"><i class="fa fa-trash"></i> Delete</button>`;
   document.getElementById('overlay').classList.add('open');
 }
 
 function maybeClose(e) { if (e.target.id === 'overlay') closeModal(); }
 function closeModal() { document.getElementById('overlay').classList.remove('open'); modalId = null; }
 function delModal() { if (modalId) delLead(modalId); closeModal(); }
+
+// ---- Edit Lead ----
+
+function esc(s) {
+  return (s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function startEdit() {
+  const l = leads.find(x => x.id === modalId); if (!l) return;
+  editTemp = l.temperature || '';
+  try { editProds = typeof l.products === 'string' ? JSON.parse(l.products) : (l.products || []); } catch(e) { editProds = []; }
+
+  const tempPills = ['hot','warm','cold'].map(v =>
+    `<button class="pill${editTemp===v?' p-'+v:''}" onclick="pickEditTemp(this,'${v}')">${v==='hot'?'🔴 Hot':v==='warm'?'🟡 Warm':'🔵 Cold'}</button>`
+  ).join('');
+
+  const dealOpts = ['< €50K','€50K–250K','€250K–1M','> €1M'];
+  const timeOpts = ['< 3 months','3–6 months','6–12 months','12 months+'];
+  const actionOpts = ['Send Proposal','Schedule Demo','Follow-up Call','Send Samples','Technical Meeting','Pricing Discussion','No Action'];
+  const prioOpts = ['P1 — This week','P2 — This month','P3 — When possible'];
+  const productList = ['SPYDR','VYPR','RAPTR','RAZR','VYNE','PYTHN','Controllers','Services'];
+
+  const ownerOpts = users.length
+    ? users.map(u => `<option value="${esc(u.name)}"${u.name === l.assigned_to ? ' selected' : ''}>${esc(u.name)}</option>`).join('')
+    : `<option value="${esc(l.assigned_to)}">${esc(l.assigned_to)}</option>`;
+
+  document.getElementById('mBody').innerHTML = `<div class="eform">
+    <div class="sec" style="margin-top:0">Contact</div>
+    <div class="g2">
+      <div class="field"><label class="lbl">First name</label><input class="inp" id="e_first" value="${esc(l.first_name)}"></div>
+      <div class="field"><label class="lbl">Last name</label><input class="inp" id="e_last" value="${esc(l.last_name)}"></div>
+    </div>
+    <div class="field"><label class="lbl">Title</label><input class="inp" id="e_title" value="${esc(l.title)}"></div>
+    <div class="field"><label class="lbl">Company</label><input class="inp" id="e_company" value="${esc(l.company)}"></div>
+    <div class="g2">
+      <div class="field"><label class="lbl">Email</label><input class="inp" id="e_email" type="email" value="${esc(l.email)}"></div>
+      <div class="field"><label class="lbl">Phone</label><input class="inp" id="e_phone" type="tel" value="${esc(l.phone)}"></div>
+    </div>
+    <div class="g2">
+      <div class="field"><label class="lbl">Country</label><input class="inp" id="e_country" value="${esc(l.country)}"></div>
+      <div class="field"><label class="lbl">LinkedIn</label><input class="inp" id="e_linkedin" value="${esc(l.linkedin)}"></div>
+    </div>
+    <div class="sec">Opportunity</div>
+    <div class="field"><label class="lbl">Temperature</label>
+      <div class="pills" id="eTempPills">${tempPills}</div>
+    </div>
+    <div class="g2">
+      <div class="field"><label class="lbl">Deal size</label>
+        <select class="inp" id="e_deal"><option value="">— Select —</option>${dealOpts.map(v=>`<option${l.deal_size===v?' selected':''}>${esc(v)}</option>`).join('')}</select>
+      </div>
+      <div class="field"><label class="lbl">Timeline</label>
+        <select class="inp" id="e_time"><option value="">— Select —</option>${timeOpts.map(v=>`<option${l.timeline===v?' selected':''}>${esc(v)}</option>`).join('')}</select>
+      </div>
+    </div>
+    <div class="field"><label class="lbl">Product interest</label>
+      <div class="pills" id="eProdPills">${productList.map(p=>`<button class="pill${editProds.includes(p)?' p-prod':''}" onclick="togEditProd(this,'${p}')">${p}</button>`).join('')}</div>
+    </div>
+    <div class="field"><label class="lbl">Assigned to</label>
+      <select class="inp" id="e_owner">${ownerOpts}</select>
+    </div>
+    <div class="field"><label class="lbl">Notes</label><textarea class="inp" id="e_notes">${esc(l.notes)}</textarea></div>
+    <div class="sec">Next action</div>
+    <div class="field">
+      <select class="inp" id="e_action"><option value="">— Select action —</option>${actionOpts.map(v=>`<option${l.next_action===v?' selected':''}>${esc(v)}</option>`).join('')}</select>
+    </div>
+    <div class="g2">
+      <div class="field"><label class="lbl">Due date</label><input class="inp" type="date" id="e_due" value="${esc(l.due_date)}"></div>
+      <div class="field"><label class="lbl">Priority</label>
+        <select class="inp" id="e_prio"><option value="">—</option>${prioOpts.map(v=>`<option${l.priority===v?' selected':''}>${esc(v)}</option>`).join('')}</select>
+      </div>
+    </div>
+  </div>`;
+
+  document.getElementById('mFoot').innerHTML = `
+    <button class="m-close" onclick="cancelEdit()">Cancel</button>
+    <button class="m-save" id="mSaveBtn" onclick="saveEdit()"><i class="fa fa-check"></i> Save</button>`;
+}
+
+function pickEditTemp(el, v) {
+  document.querySelectorAll('#eTempPills .pill').forEach(p => p.className = 'pill');
+  editTemp = v; el.classList.add('p-' + v);
+}
+
+function togEditProd(el, v) {
+  const i = editProds.indexOf(v);
+  i > -1 ? (editProds.splice(i, 1), el.className = 'pill') : (editProds.push(v), el.classList.add('p-prod'));
+}
+
+function cancelEdit() { viewLead(modalId); }
+
+async function saveEdit() {
+  const btn = document.getElementById('mSaveBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Saving...';
+  try {
+    const data = await api('/api/leads/' + modalId, {
+      method: 'PUT',
+      body: JSON.stringify({
+        first_name: document.getElementById('e_first').value.trim(),
+        last_name:  document.getElementById('e_last').value.trim(),
+        title:      document.getElementById('e_title').value.trim(),
+        company:    document.getElementById('e_company').value.trim(),
+        email:      document.getElementById('e_email').value.trim(),
+        phone:      document.getElementById('e_phone').value.trim(),
+        country:    document.getElementById('e_country').value.trim(),
+        linkedin:   document.getElementById('e_linkedin').value.trim(),
+        temperature: editTemp,
+        deal_size:  document.getElementById('e_deal').value,
+        timeline:   document.getElementById('e_time').value,
+        products:   editProds,
+        assigned_to: document.getElementById('e_owner').value,
+        notes:      document.getElementById('e_notes').value.trim(),
+        next_action: document.getElementById('e_action').value,
+        due_date:   document.getElementById('e_due').value,
+        priority:   document.getElementById('e_prio').value,
+      })
+    });
+    const idx = leads.findIndex(x => x.id === modalId);
+    if (idx > -1) leads[idx] = { ...leads[idx], ...data.lead };
+    renderLeads();
+    toast('Lead updated ✓');
+    viewLead(modalId); // return to view mode
+  } catch (e) {
+    toast('Error: ' + e.message);
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa fa-check"></i> Save';
+  }
+}
 
 async function delLead(id) {
   try {

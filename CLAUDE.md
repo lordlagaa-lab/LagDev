@@ -39,11 +39,18 @@ cd worker && wrangler deploy
 cd frontend && wrangler pages deploy . --project-name=fluence-lead-scanner
 ```
 
-To apply schema changes to the D1 database:
+To apply schema changes to the D1 database (full re-apply — safe with `CREATE TABLE IF NOT EXISTS`):
 
 ```bash
 cd worker
 wrangler d1 execute fluence-leads --file=schema.sql
+```
+
+To apply an **additive migration** to the live database (e.g. adding a new column):
+
+```bash
+# Add voice_data column (run once on the live DB — already in schema.sql for new installs)
+wrangler d1 execute fluence-leads --command="ALTER TABLE leads ADD COLUMN voice_data TEXT NOT NULL DEFAULT '';"
 ```
 
 To run a raw SQL command against D1:

@@ -11,8 +11,8 @@ export async function createLead(DB, data) {
   const { results } = await DB.prepare(`
     INSERT INTO leads (user_id, show_id, first_name, last_name, title, company,
       email, phone, country, linkedin, temperature, deal_size, timeline,
-      products, notes, assigned_to, next_action, due_date, priority, transcript, show_name)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      products, notes, assigned_to, next_action, due_date, priority, transcript, voice_data, show_name)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     RETURNING *
   `).bind(
     data.user_id,
@@ -35,6 +35,7 @@ export async function createLead(DB, data) {
     data.due_date || '',
     data.priority || '',
     data.transcript || '',
+    data.voice_data || '',
     data.show_name || ''
   ).all();
 
@@ -75,7 +76,7 @@ export async function updateLead(DB, id, data, auth) {
       email = ?, phone = ?, country = ?, linkedin = ?,
       temperature = ?, deal_size = ?, timeline = ?, products = ?,
       notes = ?, assigned_to = ?, next_action = ?, due_date = ?,
-      priority = ?, transcript = ?, show_name = ?,
+      priority = ?, transcript = ?, voice_data = ?, show_name = ?,
       updated_at = datetime('now')
     WHERE id = ?
     RETURNING *
@@ -98,6 +99,7 @@ export async function updateLead(DB, id, data, auth) {
     data.due_date ?? existing.due_date,
     data.priority ?? existing.priority,
     data.transcript ?? existing.transcript,
+    data.voice_data ?? existing.voice_data ?? '',
     data.show_name ?? existing.show_name,
     id
   ).all();
@@ -114,6 +116,24 @@ export async function deleteLead(DB, id, auth) {
 
   await DB.prepare('DELETE FROM leads WHERE id = ?').bind(id).run();
   return true;
+}
+
+/**
+ * Update only the voice_data column for a lead (separate audio upload endpoint)
+ */
+export async function updateLeadAudio(DB, id, voiceData, auth) {
+  const existing = await getLead(DB, id, auth);
+  if (!existing) return null;
+
+  try {
+    await DB.prepare('UPDATE leads SET voice_data = ?, updated_at = datetime(\'now\') WHERE id = ?')
+      .bind(voiceData, id).run();
+    return true;
+  } catch (e) {
+    // voice_data column may not exist on older DB instances — degrade gracefully
+    console.warn('updateLeadAudio failed (column may be missing):', e.message);
+    return false;
+  }
 }
 
 /**

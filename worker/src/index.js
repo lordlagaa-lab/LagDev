@@ -6,7 +6,7 @@
 //   JWT_SECRET (secret) — for signing auth tokens
 // =============================================================================
 
-import { createLead, getLead, updateLead, deleteLead, getStats } from './db.js';
+import { createLead, getLead, updateLead, deleteLead, getStats, updateLeadAudio } from './db.js';
 import { verifyPassword, hashPassword, createToken, verifyToken } from './auth.js';
 
 export default {
@@ -53,6 +53,7 @@ export default {
       if (path.match(/^\/api\/leads\/\d+$/) && method === 'GET') return getLeadHandler(path, env, auth, corsHeaders);
       if (path.match(/^\/api\/leads\/\d+$/) && method === 'PUT') return updateLeadHandler(request, path, env, auth, corsHeaders);
       if (path.match(/^\/api\/leads\/\d+$/) && method === 'DELETE') return deleteLeadHandler(path, env, auth, corsHeaders);
+      if (path.match(/^\/api\/leads\/\d+\/audio$/) && method === 'PUT') return updateLeadAudioHandler(request, path, env, auth, corsHeaders);
       if (path === '/api/leads/stats' && method === 'GET') return getStatsHandler(env, auth, corsHeaders);
 
       // Users
@@ -198,6 +199,15 @@ async function deleteLeadHandler(path, env, auth, corsHeaders) {
   const id = path.split('/').pop();
   const deleted = await deleteLead(env.DB, id, auth);
   if (!deleted) return json({ error: 'Not found' }, corsHeaders, 404);
+  return json({ success: true }, corsHeaders);
+}
+
+async function updateLeadAudioHandler(request, path, env, auth, corsHeaders) {
+  const id = path.split('/')[3]; // /api/leads/:id/audio
+  const { voice_data } = await request.json();
+  if (!voice_data) return json({ error: 'voice_data required' }, corsHeaders, 400);
+  const ok = await updateLeadAudio(env.DB, id, voice_data, auth);
+  if (ok === null) return json({ error: 'Not found' }, corsHeaders, 404);
   return json({ success: true }, corsHeaders);
 }
 

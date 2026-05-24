@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS leads (
   due_date TEXT NOT NULL DEFAULT '',
   priority TEXT NOT NULL DEFAULT '',
   transcript TEXT NOT NULL DEFAULT '',
+  voice_data TEXT NOT NULL DEFAULT '',
   show_name TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now')),

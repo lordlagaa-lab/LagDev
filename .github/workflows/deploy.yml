@@ -20,6 +20,7 @@ jobs:
           command: deploy
 
       - name: Set JWT Secret
+        if: ${{ env.JWT_SECRET != '' }}
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -27,6 +28,8 @@ jobs:
           command: secret put JWT_SECRET
           secrets: |
             JWT_SECRET
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
 
       - name: Deploy Frontend
         uses: cloudflare/wrangler-action@v3

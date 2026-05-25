@@ -11,8 +11,8 @@ export async function createLead(DB, data) {
   const { results } = await DB.prepare(`
     INSERT INTO leads (user_id, show_id, first_name, last_name, title, company,
       email, phone, country, linkedin, temperature, deal_size, timeline,
-      products, notes, assigned_to, next_action, due_date, priority, transcript, voice_data, show_name)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      products, notes, assigned_to, next_action, due_date, priority, transcript, show_name)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     RETURNING *
   `).bind(
     data.user_id,
@@ -35,7 +35,6 @@ export async function createLead(DB, data) {
     data.due_date || '',
     data.priority || '',
     data.transcript || '',
-    data.voice_data || '',
     data.show_name || ''
   ).all();
 
@@ -76,7 +75,7 @@ export async function updateLead(DB, id, data, auth) {
       email = ?, phone = ?, country = ?, linkedin = ?,
       temperature = ?, deal_size = ?, timeline = ?, products = ?,
       notes = ?, assigned_to = ?, next_action = ?, due_date = ?,
-      priority = ?, transcript = ?, voice_data = ?, show_name = ?,
+      priority = ?, transcript = ?, show_name = ?,
       updated_at = datetime('now')
     WHERE id = ?
     RETURNING *
@@ -99,7 +98,6 @@ export async function updateLead(DB, id, data, auth) {
     data.due_date ?? existing.due_date,
     data.priority ?? existing.priority,
     data.transcript ?? existing.transcript,
-    data.voice_data ?? existing.voice_data ?? '',
     data.show_name ?? existing.show_name,
     id
   ).all();

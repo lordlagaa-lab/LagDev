@@ -185,3 +185,4 @@ Se vais pedir ajuda ao Claude (https://claude.ai), **copia e cola isto no chat**
 - JWT expira em 7 dias
 - Dados sincronizados em tempo real com a Cloudflare edge
 - Este repo é o SOURCE OF TRUTH — altera aqui e faz deploy
+# Test deploy commit

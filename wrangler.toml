@@ -6,7 +6,7 @@ compatibility_date = "2025-04-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "fluence-leads"
-database_id = "949471af-1670-4aa7-b65a-5b1f24078ccf"
+database_id = "1d3011db-c2d0-49d2-9da5-04e82529728a"
 
 [env.production]
 vars = { ENVIRONMENT = "production" }

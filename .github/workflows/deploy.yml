@@ -19,15 +19,6 @@ jobs:
           workingDirectory: worker
           command: deploy
 
-      - name: Set JWT Secret (keep-alive)
-        continue-on-error: true
-        shell: bash
-        run: echo "$JWT_SECRET" | npx wrangler secret put JWT_SECRET 2>&1 || true
-        working-directory: worker
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-
       - name: Deploy Frontend
         uses: cloudflare/wrangler-action@v3
         with:
